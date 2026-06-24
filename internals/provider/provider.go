@@ -3,8 +3,11 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
-	"time"
+	"sync"
+
+	"github.com/himanshukumar42/soundauth/internals/models"
 )
 
 type Provider string
@@ -15,9 +18,41 @@ const (
 	ProviderGithub  Provider = "GithubOAuth"
 	ProviderMagic   Provider = "MagicLink"
 	ProviderSAML    Provider = "SAML"
-
-	DefaultTokenTTL = time.Hour
 )
+
+type AuthenticationProvider interface {
+	Name() string
+	Authenticate(ctx context.Context, request models.AuthRequest) (*models.AuthResponse, error)
+}
+
+// Factory Pattern
+type ProviderFactory struct {
+	mu        sync.RWMutex
+	providers map[string]AuthenticationProvider
+}
+
+func NewProviderFactory() *ProviderFactory {
+	return &ProviderFactory{
+		providers: make(map[string]AuthenticationProvider),
+	}
+}
+
+func (pf *ProviderFactory) Register(provider AuthenticationProvider) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+
+	pf.providers[provider.Name()] = provider
+}
+
+func (pf *ProviderFactory) Get(name string) (AuthenticationProvider, error) {
+	pf.mu.RLock()
+	defer pf.mu.RUnlock()
+	provider, exists := pf.providers[name]
+	if !exists {
+		return nil, fmt.Errorf("provider %s not registered", name)
+	}
+	return provider, nil
+}
 
 type ProviderResponse struct {
 	UserID        string
@@ -69,7 +104,7 @@ func (pp *PasskeyProvider) Name() Provider {
 	return ProviderPasskey
 }
 
-func (pp *PasskeyProvider) Authenticate(ctx context.Context, req AuthRequest) (*ProviderResponse, error) {
+func (pp *PasskeyProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -111,7 +146,7 @@ func (gp *GoogleOAuthProvider) Name() Provider {
 	return ProviderGoogle
 }
 
-func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req AuthRequest) (*ProviderResponse, error) {
+func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

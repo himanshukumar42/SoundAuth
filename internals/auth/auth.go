@@ -3,20 +3,42 @@ package auth
 import (
 	"context"
 	"log"
+	"time"
+
+	"github.com/himanshukumar42/soundauth/internals/audit"
+	"github.com/himanshukumar42/soundauth/internals/cache"
+	"github.com/himanshukumar42/soundauth/internals/models"
+	"github.com/himanshukumar42/soundauth/internals/provider"
+	"github.com/himanshukumar42/soundauth/internals/user"
 )
 
-// Dependency Injection
+const (
+	DefaultTokenTTL = time.Hour
+)
 
-type AuthService struct {
-	Factory      *ProviderFactory
-	UserRepo     UserRepository
-	Cache        Cache
-	SessionCache SessionCache
-	TokenManager TokenManager
-	AuditLog     AuditLogRepository
+type Claims struct {
+	UserID    string
+	Audience  string
+	ExpiresAt int64
+	IssuedAt  int64
 }
 
-func NewAuthService(factory *ProviderFactory, userRepo UserRepository, cache Cache, sessionCache SessionCache, tokenManager TokenManager, auditLog AuditLogRepository) *AuthService {
+type TokenManager interface {
+	GenerateToken(ctx context.Context, userId string) (string, error)
+	VerifyToken(ctx context.Context, token string) (*Claims, error)
+}
+
+// Dependency Injection
+type AuthService struct {
+	Factory      *provider.ProviderFactory
+	UserRepo     user.UserRepository
+	Cache        cache.Cache
+	SessionCache cache.SessionCache
+	TokenManager TokenManager
+	AuditLog     audit.AuditLogRepository
+}
+
+func NewAuthService(factory *provider.ProviderFactory, userRepo user.UserRepository, cache cache.Cache, sessionCache cache.SessionCache, tokenManager TokenManager, auditLog audit.AuditLogRepository) *AuthService {
 	return &AuthService{
 		Factory:      factory,
 		UserRepo:     userRepo,
@@ -27,7 +49,7 @@ func NewAuthService(factory *ProviderFactory, userRepo UserRepository, cache Cac
 	}
 }
 
-func (as *AuthService) Authenticate(ctx context.Context, req AuthRequest) (*AuthResponse, error) {
+func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest) (*models.AuthResponse, error) {
 	provider, err := as.Factory.Get(req.Provider)
 	if err != nil {
 		return nil, err
@@ -54,7 +76,7 @@ func (as *AuthService) Authenticate(ctx context.Context, req AuthRequest) (*Auth
 		return nil, err
 	}
 
-	return &AuthResponse{
+	return &models.AuthResponse{
 		Authenticated: true,
 		UserID:        user.ID,
 		Provider:      req.Provider,
