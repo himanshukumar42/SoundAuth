@@ -22,7 +22,7 @@ const (
 
 type AuthenticationProvider interface {
 	Name() string
-	Authenticate(ctx context.Context, request models.AuthRequest) (*models.AuthResponse, error)
+	Authenticate(ctx context.Context, request models.AuthRequest) (*ProviderResponse, error)
 }
 
 // Factory Pattern

@@ -7,9 +7,11 @@ import (
 
 	"github.com/himanshukumar42/soundauth/internals/audit"
 	"github.com/himanshukumar42/soundauth/internals/cache"
+	"github.com/himanshukumar42/soundauth/internals/lib"
 	"github.com/himanshukumar42/soundauth/internals/models"
 	"github.com/himanshukumar42/soundauth/internals/provider"
-	"github.com/himanshukumar42/soundauth/internals/user"
+	"github.com/himanshukumar42/soundauth/internals/repository"
+	"github.com/himanshukumar42/soundauth/internals/services"
 )
 
 const (
@@ -30,17 +32,21 @@ type TokenManager interface {
 
 // Dependency Injection
 type AuthService struct {
+	Middleware   *lib.AuthenticationMiddleware
 	Factory      *provider.ProviderFactory
-	UserRepo     user.UserRepository
-	Cache        cache.Cache
-	SessionCache cache.SessionCache
+	Verifier     *services.SignatureVerifier
+	UserRepo     *repository.InMemoryUserRepository
+	Cache        *cache.Cache
+	SessionCache *cache.SessionCache
 	TokenManager TokenManager
-	AuditLog     audit.AuditLogRepository
+	AuditLog     *audit.AuditLogRepository
 }
 
-func NewAuthService(factory *provider.ProviderFactory, userRepo user.UserRepository, cache cache.Cache, sessionCache cache.SessionCache, tokenManager TokenManager, auditLog audit.AuditLogRepository) *AuthService {
+func NewAuthService(middleware *lib.AuthenticationMiddleware, factory *provider.ProviderFactory, verifier *services.SignatureVerifier, userRepo *repository.InMemoryUserRepository, cache *cache.Cache, sessionCache *cache.SessionCache, tokenManager TokenManager, auditLog *audit.AuditLogRepository) *AuthService {
 	return &AuthService{
+		Middleware:   middleware,
 		Factory:      factory,
+		Verifier:     verifier,
 		UserRepo:     userRepo,
 		Cache:        cache,
 		SessionCache: sessionCache,
@@ -50,6 +56,14 @@ func NewAuthService(factory *provider.ProviderFactory, userRepo user.UserReposit
 }
 
 func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest) (*models.AuthResponse, error) {
+
+	// 1. Middleware
+	if err := as.Middleware.Process(ctx, req); err != nil {
+		return nil, err
+	}
+
+	// 2. Factory => Authentication Provider
+
 	provider, err := as.Factory.Get(req.Provider)
 	if err != nil {
 		return nil, err
@@ -57,6 +71,7 @@ func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest)
 
 	log.Printf("[Auth] Tenant=%s Provider=%s", req.TenantID, req.Provider)
 
+	// 3. Authentication
 	authResponse, err := provider.Authenticate(ctx, req)
 	if err != nil {
 		return nil, err
@@ -66,16 +81,24 @@ func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest)
 		return nil, err
 	}
 
+	// 4. Signature Verification
+	if err := as.Verifier.Verify(ctx, req); err != nil {
+		return nil, err
+	}
+
+	// 5. User Lookup
 	user, err := as.UserRepo.FindByID(ctx, authResponse.UserID)
 	if err != nil {
 		return nil, err
 	}
 
+	// 6. JWT Generation
 	token, err := as.TokenManager.GenerateToken(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	// 7. Build Response
 	return &models.AuthResponse{
 		Authenticated: true,
 		UserID:        user.ID,

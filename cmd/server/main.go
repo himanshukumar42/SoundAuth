@@ -8,5 +8,4 @@ type TenantConfig struct {
 }
 
 func main() {
-
 }
