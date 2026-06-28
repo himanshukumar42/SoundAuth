@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/himanshukumar42/soundauth/internals/models"
+	"github.com/himanshukumar42/soundauth/internal/models"
 )
 
 type InMemoryUserRepository struct {

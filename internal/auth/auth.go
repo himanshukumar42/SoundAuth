@@ -5,13 +5,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/himanshukumar42/soundauth/internals/audit"
-	"github.com/himanshukumar42/soundauth/internals/cache"
-	"github.com/himanshukumar42/soundauth/internals/lib"
-	"github.com/himanshukumar42/soundauth/internals/models"
-	"github.com/himanshukumar42/soundauth/internals/provider"
-	"github.com/himanshukumar42/soundauth/internals/repository"
-	"github.com/himanshukumar42/soundauth/internals/services"
+	"github.com/himanshukumar42/soundauth/internal/audit"
+	"github.com/himanshukumar42/soundauth/internal/cache"
+	"github.com/himanshukumar42/soundauth/internal/lib"
+	"github.com/himanshukumar42/soundauth/internal/models"
+	"github.com/himanshukumar42/soundauth/internal/provider"
+	"github.com/himanshukumar42/soundauth/internal/repository"
+	"github.com/himanshukumar42/soundauth/internal/services"
 )
 
 const (

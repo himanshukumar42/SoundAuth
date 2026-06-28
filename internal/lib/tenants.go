@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/himanshukumar42/soundauth/internals/cache"
-	"github.com/himanshukumar42/soundauth/internals/vault"
+	"github.com/himanshukumar42/soundauth/internal/cache"
+	"github.com/himanshukumar42/soundauth/internal/vault"
 )
 
 const (

@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/himanshukumar42/soundauth/internals/models"
-	"github.com/himanshukumar42/soundauth/internals/provider"
+	"github.com/himanshukumar42/soundauth/internal/models"
+	"github.com/himanshukumar42/soundauth/internal/provider"
 )
 
 type LoggingDecorator struct {

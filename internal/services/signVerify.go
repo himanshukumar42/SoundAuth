@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/himanshukumar42/soundauth/internals/lib"
-	"github.com/himanshukumar42/soundauth/internals/models"
-	"github.com/himanshukumar42/soundauth/internals/worker"
+	"github.com/himanshukumar42/soundauth/internal/lib"
+	"github.com/himanshukumar42/soundauth/internal/models"
+	"github.com/himanshukumar42/soundauth/internal/worker"
 )
 
 type SignatureVerifier struct {

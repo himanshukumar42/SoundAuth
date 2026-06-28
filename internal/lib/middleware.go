@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/himanshukumar42/soundauth/internals/models"
+	"github.com/himanshukumar42/soundauth/internal/models"
 )
 
 type AuthenticationMiddleware struct {
