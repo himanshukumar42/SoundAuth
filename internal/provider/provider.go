@@ -22,7 +22,7 @@ const (
 
 type AuthenticationProvider interface {
 	Name() string
-	Authenticate(ctx context.Context, request models.AuthRequest) (*ProviderResponse, error)
+	Authenticate(ctx context.Context, request models.AuthRequest) (*models.ProviderResponse, error)
 }
 
 // Factory Pattern
@@ -54,14 +54,8 @@ func (pf *ProviderFactory) Get(name string) (AuthenticationProvider, error) {
 	return provider, nil
 }
 
-type ProviderResponse struct {
-	UserID        string
-	Authenticated bool
-	Metadata      map[string]string
-}
-
 type ResponseAdapter interface {
-	Normalize(any) (*ProviderResponse, error)
+	Normalize(any) (*models.ProviderResponse, error)
 }
 
 // Adapter Pattern
@@ -71,7 +65,7 @@ func NewDefaultAdapter() *DefaultAdapter {
 	return &DefaultAdapter{}
 }
 
-func (a *DefaultAdapter) Normalize(response any) (*ProviderResponse, error) {
+func (a *DefaultAdapter) Normalize(response any) (*models.ProviderResponse, error) {
 	data, ok := response.(map[string]any)
 	if !ok {
 		return nil, errors.New("invalid provider response")
@@ -80,7 +74,7 @@ func (a *DefaultAdapter) Normalize(response any) (*ProviderResponse, error) {
 	userID, _ := data["user_id"].(string)
 	status, _ := data["status"].(bool)
 
-	return &ProviderResponse{
+	return &models.ProviderResponse{
 		UserID:        userID,
 		Authenticated: status,
 		Metadata: map[string]string{
@@ -104,7 +98,7 @@ func (pp *PasskeyProvider) Name() Provider {
 	return ProviderPasskey
 }
 
-func (pp *PasskeyProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*ProviderResponse, error) {
+func (pp *PasskeyProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -146,7 +140,7 @@ func (gp *GoogleOAuthProvider) Name() Provider {
 	return ProviderGoogle
 }
 
-func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*ProviderResponse, error) {
+func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

@@ -23,7 +23,7 @@ func (ld *LoggingDecorator) Name() string {
 	return ld.next.Name()
 }
 
-func (ld *LoggingDecorator) Log(ctx context.Context, req models.AuthRequest) (*models.AuthResponse, error) {
+func (ld *LoggingDecorator) Log(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	start := time.Now()
 
 	log.Printf("[LOG] Authentication started Provider=%s Tenant=%s", req.Provider, req.TenantID)
@@ -49,7 +49,7 @@ func (d *MetricsDecorator) Name() string {
 	return d.next.Name()
 }
 
-func (md *MetricsDecorator) Metric(ctx context.Context, req models.AuthRequest) (*models.AuthResponse, error) {
+func (md *MetricsDecorator) Metric(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	start := time.Now()
 
 	resp, err := md.next.Authenticate(ctx, req)
@@ -73,7 +73,7 @@ func (ad *AuditDecorator) Name() string {
 	return ad.next.Name()
 }
 
-func (ad *AuditDecorator) Audit(ctx context.Context, req models.AuthRequest) (*models.AuthResponse, error) {
+func (ad *AuditDecorator) Audit(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	log.Printf("[AUDIT] login attempt tenat=%s provider=%s device=%s", req.TenantID, req.Provider, req.DeviceID)
 
 	return ad.next.Authenticate(ctx, req)
