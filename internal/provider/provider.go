@@ -3,30 +3,50 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
-	"time"
+	"sync"
+
+	"github.com/himanshukumar42/soundauth/internal/models"
 )
 
-type Provider string
+type AuthenticationProvider interface {
+	Name() models.Provider
+	Authenticate(ctx context.Context, request models.AuthRequest) (*models.ProviderResponse, error)
+}
 
-const (
-	ProviderPasskey Provider = "Passkey"
-	ProviderGoogle  Provider = "GoogleOAuth"
-	ProviderGithub  Provider = "GithubOAuth"
-	ProviderMagic   Provider = "MagicLink"
-	ProviderSAML    Provider = "SAML"
+// Factory Pattern
+type ProviderFactory struct {
+	mu        sync.RWMutex
+	providers map[models.Provider]AuthenticationProvider
+}
 
-	DefaultTokenTTL = time.Hour
-)
+func NewProviderFactory() *ProviderFactory {
+	return &ProviderFactory{
+		providers: make(map[models.Provider]AuthenticationProvider),
+	}
+}
 
-type ProviderResponse struct {
-	UserID        string
-	Authenticated bool
-	Metadata      map[string]string
+func (pf *ProviderFactory) Register(provider AuthenticationProvider) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+
+	pf.providers[provider.Name()] = provider
+}
+
+func (pf *ProviderFactory) Get(name models.Provider) (AuthenticationProvider, error) {
+	pf.mu.RLock()
+	defer pf.mu.RUnlock()
+	providerName := models.Provider(name)
+	provider, exists := pf.providers[providerName]
+	if !exists {
+		return nil, fmt.Errorf("provider %s not registered", name)
+	}
+	return provider, nil
 }
 
 type ResponseAdapter interface {
-	Normalize(any) (*ProviderResponse, error)
+	Normalize(any) (*models.ProviderResponse, error)
 }
 
 // Adapter Pattern
@@ -36,7 +56,7 @@ func NewDefaultAdapter() *DefaultAdapter {
 	return &DefaultAdapter{}
 }
 
-func (a *DefaultAdapter) Normalize(response any) (*ProviderResponse, error) {
+func (a *DefaultAdapter) Normalize(response any) (*models.ProviderResponse, error) {
 	data, ok := response.(map[string]any)
 	if !ok {
 		return nil, errors.New("invalid provider response")
@@ -45,7 +65,7 @@ func (a *DefaultAdapter) Normalize(response any) (*ProviderResponse, error) {
 	userID, _ := data["user_id"].(string)
 	status, _ := data["status"].(bool)
 
-	return &ProviderResponse{
+	return &models.ProviderResponse{
 		UserID:        userID,
 		Authenticated: status,
 		Metadata: map[string]string{
@@ -65,11 +85,11 @@ func NewPasskeyProvider(adapter ResponseAdapter) *PasskeyProvider {
 	}
 }
 
-func (pp *PasskeyProvider) Name() Provider {
-	return ProviderPasskey
+func (pp *PasskeyProvider) Name() models.Provider {
+	return models.ProviderPasskey
 }
 
-func (pp *PasskeyProvider) Authenticate(ctx context.Context, req AuthRequest) (*ProviderResponse, error) {
+func (pp *PasskeyProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -107,11 +127,11 @@ func NewGoogleOAuthProvider(adapter ResponseAdapter) *GoogleOAuthProvider {
 	}
 }
 
-func (gp *GoogleOAuthProvider) Name() Provider {
-	return ProviderGoogle
+func (gp *GoogleOAuthProvider) Name() models.Provider {
+	return models.ProviderGoogle
 }
 
-func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req AuthRequest) (*ProviderResponse, error) {
+func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

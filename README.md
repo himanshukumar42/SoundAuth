@@ -1,4 +1,4 @@
-# 21. Passwordless Authentication SDK (SoundAuth) ⭐⭐⭐⭐⭐
+# Passwordless Authentication SDK (SoundAuth) ⭐⭐⭐⭐⭐
 
 ## Concepts Tested
 
