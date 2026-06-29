@@ -10,30 +10,20 @@ import (
 	"github.com/himanshukumar42/soundauth/internal/models"
 )
 
-type Provider string
-
-const (
-	ProviderPasskey Provider = "Passkey"
-	ProviderGoogle  Provider = "GoogleOAuth"
-	ProviderGithub  Provider = "GithubOAuth"
-	ProviderMagic   Provider = "MagicLink"
-	ProviderSAML    Provider = "SAML"
-)
-
 type AuthenticationProvider interface {
-	Name() string
+	Name() models.Provider
 	Authenticate(ctx context.Context, request models.AuthRequest) (*models.ProviderResponse, error)
 }
 
 // Factory Pattern
 type ProviderFactory struct {
 	mu        sync.RWMutex
-	providers map[string]AuthenticationProvider
+	providers map[models.Provider]AuthenticationProvider
 }
 
 func NewProviderFactory() *ProviderFactory {
 	return &ProviderFactory{
-		providers: make(map[string]AuthenticationProvider),
+		providers: make(map[models.Provider]AuthenticationProvider),
 	}
 }
 
@@ -44,10 +34,11 @@ func (pf *ProviderFactory) Register(provider AuthenticationProvider) {
 	pf.providers[provider.Name()] = provider
 }
 
-func (pf *ProviderFactory) Get(name string) (AuthenticationProvider, error) {
+func (pf *ProviderFactory) Get(name models.Provider) (AuthenticationProvider, error) {
 	pf.mu.RLock()
 	defer pf.mu.RUnlock()
-	provider, exists := pf.providers[name]
+	providerName := models.Provider(name)
+	provider, exists := pf.providers[providerName]
 	if !exists {
 		return nil, fmt.Errorf("provider %s not registered", name)
 	}
@@ -94,8 +85,8 @@ func NewPasskeyProvider(adapter ResponseAdapter) *PasskeyProvider {
 	}
 }
 
-func (pp *PasskeyProvider) Name() Provider {
-	return ProviderPasskey
+func (pp *PasskeyProvider) Name() models.Provider {
+	return models.ProviderPasskey
 }
 
 func (pp *PasskeyProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
@@ -136,8 +127,8 @@ func NewGoogleOAuthProvider(adapter ResponseAdapter) *GoogleOAuthProvider {
 	}
 }
 
-func (gp *GoogleOAuthProvider) Name() Provider {
-	return ProviderGoogle
+func (gp *GoogleOAuthProvider) Name() models.Provider {
+	return models.ProviderGoogle
 }
 
 func (gp *GoogleOAuthProvider) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {

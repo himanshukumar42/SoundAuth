@@ -19,11 +19,11 @@ func NewLoggingDecorator(next provider.AuthenticationProvider) *LoggingDecorator
 	}
 }
 
-func (ld *LoggingDecorator) Name() string {
+func (ld *LoggingDecorator) Name() models.Provider {
 	return ld.next.Name()
 }
 
-func (ld *LoggingDecorator) Log(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
+func (ld *LoggingDecorator) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	start := time.Now()
 
 	log.Printf("[LOG] Authentication started Provider=%s Tenant=%s", req.Provider, req.TenantID)
@@ -45,11 +45,11 @@ func NewMetricsDecorator(next provider.AuthenticationProvider) *MetricsDecorator
 	}
 }
 
-func (d *MetricsDecorator) Name() string {
+func (d *MetricsDecorator) Name() models.Provider {
 	return d.next.Name()
 }
 
-func (md *MetricsDecorator) Metric(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
+func (md *MetricsDecorator) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	start := time.Now()
 
 	resp, err := md.next.Authenticate(ctx, req)
@@ -69,11 +69,11 @@ func NewAuditDecorator(next provider.AuthenticationProvider) *AuditDecorator {
 	}
 }
 
-func (ad *AuditDecorator) Name() string {
+func (ad *AuditDecorator) Name() models.Provider {
 	return ad.next.Name()
 }
 
-func (ad *AuditDecorator) Audit(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
+func (ad *AuditDecorator) Authenticate(ctx context.Context, req models.AuthRequest) (*models.ProviderResponse, error) {
 	log.Printf("[AUDIT] login attempt tenat=%s provider=%s device=%s", req.TenantID, req.Provider, req.DeviceID)
 
 	return ad.next.Authenticate(ctx, req)

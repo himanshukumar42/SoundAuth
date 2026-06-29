@@ -2,15 +2,18 @@ package models
 
 type AuthRequest struct {
 	TenantID   string
-	Provider   string
+	Provider   Provider
 	Credential string
 	DeviceID   string
+	UserAgent  string
+	IPAddress  string
 }
 
 type AuthResponse struct {
 	Authenticated bool
 	UserID        string
-	Provider      string
-	Token         string
+	Provider      Provider
+	AccessToken   string
+	RefreshToken  string
 	ExpiresIn     int64
 }

@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/himanshukumar42/soundauth/internal/audit"
 	"github.com/himanshukumar42/soundauth/internal/cache"
@@ -12,46 +11,33 @@ import (
 	"github.com/himanshukumar42/soundauth/internal/provider"
 	"github.com/himanshukumar42/soundauth/internal/repository"
 	"github.com/himanshukumar42/soundauth/internal/services"
+	"github.com/himanshukumar42/soundauth/internal/vault"
 )
-
-const (
-	DefaultTokenTTL = time.Hour
-)
-
-type Claims struct {
-	UserID    string
-	Audience  string
-	ExpiresAt int64
-	IssuedAt  int64
-}
-
-type TokenManager interface {
-	GenerateToken(ctx context.Context, userId string) (string, error)
-	VerifyToken(ctx context.Context, token string) (*Claims, error)
-}
 
 // Dependency Injection
 type AuthService struct {
-	Middleware   *lib.AuthenticationMiddleware
-	Factory      *provider.ProviderFactory
-	Verifier     *services.SignatureVerifier
-	UserRepo     *repository.InMemoryUserRepository
-	Cache        *cache.Cache
-	SessionCache *cache.SessionCache
-	TokenManager TokenManager
-	AuditLog     *audit.AuditLogRepository
+	Middleware     *lib.AuthenticationMiddleware
+	Factory        *provider.ProviderFactory
+	Verifier       *services.SignatureVerifier
+	UserRepo       *repository.InMemoryUserRepository
+	Cache          cache.Cache
+	SessionManager models.SessionManager
+	Vault          *vault.VaultClient
+	TokenManager   models.TokenManager
+	AuditLog       *audit.AuditLogRepository
 }
 
-func NewAuthService(middleware *lib.AuthenticationMiddleware, factory *provider.ProviderFactory, verifier *services.SignatureVerifier, userRepo *repository.InMemoryUserRepository, cache *cache.Cache, sessionCache *cache.SessionCache, tokenManager TokenManager, auditLog *audit.AuditLogRepository) *AuthService {
+func NewAuthService(middleware *lib.AuthenticationMiddleware, factory *provider.ProviderFactory, verifier *services.SignatureVerifier, userRepo *repository.InMemoryUserRepository, cache cache.Cache, sessionManager models.SessionManager, vault *vault.VaultClient, tokenManager models.TokenManager, auditLog *audit.AuditLogRepository) *AuthService {
 	return &AuthService{
-		Middleware:   middleware,
-		Factory:      factory,
-		Verifier:     verifier,
-		UserRepo:     userRepo,
-		Cache:        cache,
-		SessionCache: sessionCache,
-		TokenManager: tokenManager,
-		AuditLog:     auditLog,
+		Middleware:     middleware,
+		Factory:        factory,
+		Verifier:       verifier,
+		UserRepo:       userRepo,
+		Cache:          cache,
+		SessionManager: sessionManager,
+		Vault:          vault,
+		TokenManager:   tokenManager,
+		AuditLog:       auditLog,
 	}
 }
 
@@ -92,8 +78,29 @@ func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest)
 		return nil, err
 	}
 
+	// Session Start
+	sessionReq := models.CreateSessionRequest{
+		UserID:    user.ID,
+		TenantID:  req.TenantID,
+		DeviceID:  req.DeviceID,
+		UserAgent: req.UserAgent,
+		IPAddress: req.IPAddress,
+	}
+	session, err := as.SessionManager.CreateSession(ctx, sessionReq)
+	if err != nil {
+		return nil, err
+	}
+
 	// 6. JWT Generation
-	token, err := as.TokenManager.GenerateToken(ctx, user.ID)
+	tokenReq := models.GenerateTokenRequest{
+		UserID:    user.ID,
+		Email:     user.Email,
+		TenantID:  req.TenantID,
+		SessionID: session.ID, // will create in a while
+		Roles:     user.Roles,
+		Scopes:    user.Scopes,
+	}
+	token, err := as.TokenManager.GenerateToken(ctx, tokenReq)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +110,8 @@ func (as *AuthService) Authenticate(ctx context.Context, req models.AuthRequest)
 		Authenticated: true,
 		UserID:        user.ID,
 		Provider:      req.Provider,
-		Token:         token,
-		ExpiresIn:     int64(DefaultTokenTTL.Seconds()),
+		AccessToken:   token.AccessToken,
+		RefreshToken:  token.RefreshToken,
+		ExpiresIn:     token.ExpiresIn,
 	}, nil
 }

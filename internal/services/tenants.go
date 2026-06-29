@@ -1,4 +1,4 @@
-package lib
+package services
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/himanshukumar42/soundauth/internal/cache"
+	"github.com/himanshukumar42/soundauth/internal/lib"
 	"github.com/himanshukumar42/soundauth/internal/vault"
 )
 
@@ -41,7 +42,7 @@ func (t *TenantService) GetSigninKey(ctx context.Context, tenant string) (string
 
 	var secret string
 
-	err = Retry(ctx, RetryAttempts, RetryTime, func() error {
+	err = lib.Retry(ctx, RetryAttempts, RetryTime, func() error {
 		var e error
 
 		secret, e = t.vault.GetSecret(ctx, tenant+"/signing-key")

@@ -5,17 +5,16 @@ import (
 	"log"
 	"time"
 
-	"github.com/himanshukumar42/soundauth/internal/lib"
 	"github.com/himanshukumar42/soundauth/internal/models"
 	"github.com/himanshukumar42/soundauth/internal/worker"
 )
 
 type SignatureVerifier struct {
-	tenantService *lib.TenantService
+	tenantService *TenantService
 	pool          *worker.VerificationPool
 }
 
-func NewSignatureVerifier(tenantService *lib.TenantService, pool *worker.VerificationPool) *SignatureVerifier {
+func NewSignatureVerifier(tenantService *TenantService, pool *worker.VerificationPool) *SignatureVerifier {
 	return &SignatureVerifier{
 		tenantService: tenantService,
 		pool:          pool,
