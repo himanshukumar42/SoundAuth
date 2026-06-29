@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/himanshukumar42/soundauth/internal/models"
-	"github.com/himanshukumar42/soundauth/internal/worker"
+	worker "github.com/himanshukumar42/soundauth/internal/workerpool"
 )
 
 type SignatureVerifier struct {

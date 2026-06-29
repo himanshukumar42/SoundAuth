@@ -10,7 +10,7 @@ import (
 	"github.com/himanshukumar42/soundauth/internal/repository"
 	"github.com/himanshukumar42/soundauth/internal/services"
 	"github.com/himanshukumar42/soundauth/internal/vault"
-	"github.com/himanshukumar42/soundauth/internal/worker"
+	worker "github.com/himanshukumar42/soundauth/internal/workerpool"
 )
 
 const (
@@ -26,7 +26,7 @@ func NewAuthenticationSDK() *auth.AuthService {
 	vault := vault.NewVaultClient()
 	userRepo := repository.NewInMemoryUserRepository()
 
-	sessionStore := auth.NewInMemorySessionStore()
+	sessionStore := repository.NewInMemorySessionStore()
 	sessionManager := auth.NewDefaultSessionManager(sessionStore)
 
 	tokenManager := auth.NewJWTTokenManager(Secret, Issuer, TTL)
